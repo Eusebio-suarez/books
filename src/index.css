@@ -172,6 +172,62 @@ img {
   outline-offset: 2px;
 }
 
+.network-status-pill {
+  position: fixed;
+  top: calc(0.75rem + env(safe-area-inset-top));
+  right: calc(0.75rem + env(safe-area-inset-right));
+  z-index: 90;
+  max-width: min(92vw, 21rem);
+  border: 1px solid var(--border-soft);
+  border-radius: 0.9rem;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+  background: var(--surface-primary);
+  padding: 0.55rem 0.7rem;
+  pointer-events: none;
+}
+
+.network-status-pill-title {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.network-status-pill-detail {
+  margin: 0.24rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.network-status-pill.is-online {
+  border-color: var(--status-success-border);
+  background: var(--status-success-bg);
+  color: var(--status-success-text);
+}
+
+.network-status-pill.is-offline {
+  border-color: var(--status-warning-border);
+  background: var(--status-warning-bg);
+  color: var(--status-warning-text);
+}
+
+@media (max-width: 640px) {
+  .network-status-pill {
+    max-width: min(95vw, 18rem);
+    padding: 0.5rem 0.62rem;
+  }
+
+  .network-status-pill-title,
+  .network-status-pill-detail {
+    font-size: 0.68rem;
+  }
+}
+
 .page-shell {
   position: relative;
   isolation: isolate;

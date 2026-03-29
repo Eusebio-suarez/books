@@ -6,6 +6,8 @@ export type QueryTone = 'info' | 'success' | 'warning' | 'error';
 export type BooksStatusCode =
   | 'ARCHIVED_LIST'
   | 'LOADING'
+  | 'OFFLINE_CACHE_MODE'
+  | 'OFFLINE_CACHE_MISS'
   | 'QUERY_SUCCESS'
   | 'DATE_ADJUSTED'
   | 'NO_RESULTS'

@@ -24,6 +24,10 @@ interface CachedWeekEntry {
   meta: BooksMeta;
 }
 
+function isOfflineMode(): boolean {
+  return typeof navigator !== 'undefined' && !navigator.onLine;
+}
+
 export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): UseBooksQueryResult {
   const [books, setBooks] = useState<BookItem[]>([]);
   const [fetchedBooks, setFetchedBooks] = useState<BookItem[]>([]);
@@ -42,6 +46,7 @@ export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): Use
       sourceMeta: BooksMeta,
       form: BooksFormState,
       inputDate: string,
+      options?: { offlineMode?: boolean },
     ): void => {
       const viewMeta =
         sourceMeta.requestedDate === inputDate
@@ -51,6 +56,7 @@ export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): Use
               requestedDate: inputDate,
             };
       const filteredBooks = filterBooksByQuery(sourceBooks, form);
+      const offlineMode = Boolean(options?.offlineMode);
 
       setFetchedBooks(sourceBooks);
       setMeta(viewMeta);
@@ -62,7 +68,9 @@ export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): Use
           createStatus(
             'warning',
             BOOKS_STATUS_CODES.NO_RESULTS,
-            'No se encontraron libros que coincidan con tu consulta en esa semana.',
+            offlineMode
+              ? 'Sin conexion: no hay coincidencias en los datos cacheados para esta semana.'
+              : 'No se encontraron libros que coincidan con tu consulta en esa semana.',
           ),
         );
         return;
@@ -73,7 +81,20 @@ export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): Use
           createStatus(
             'info',
             BOOKS_STATUS_CODES.DATE_ADJUSTED,
-            `La fecha solicitada se ajusto a ${viewMeta.resolvedDate} porque esta lista solo se publicaba los domingos.`,
+            offlineMode
+              ? `Sin conexion: se ajusto la fecha a ${viewMeta.resolvedDate} y se uso el contenido disponible en cache local.`
+              : `La fecha solicitada se ajusto a ${viewMeta.resolvedDate} porque esta lista solo se publicaba los domingos.`,
+          ),
+        );
+        return;
+      }
+
+      if (offlineMode) {
+        setStatus(
+          createStatus(
+            'info',
+            BOOKS_STATUS_CODES.OFFLINE_CACHE_MODE,
+            `Sin conexion: mostrando resultados desde cache local para la semana ${viewMeta.resolvedDate}.`,
           ),
         );
         return;
@@ -99,7 +120,18 @@ export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): Use
     }
 
     const inputDate = resolveRequestedDate(form);
+    const offlineMode = isOfflineMode();
     let resolvedDate: string;
+
+    if (offlineMode) {
+      setStatus(
+        createStatus(
+          'info',
+          BOOKS_STATUS_CODES.OFFLINE_CACHE_MODE,
+          'Sin conexion: se intentara resolver la consulta con datos cacheados.',
+        ),
+      );
+    }
 
     try {
       resolvedDate = normalizeToPublishedSunday(inputDate);
@@ -127,7 +159,9 @@ export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): Use
       abortRef.current?.abort();
       requestIdRef.current += 1;
       setIsLoading(false);
-      applyQueryResult(cachedWeek.books, cachedWeek.meta, form, inputDate);
+      applyQueryResult(cachedWeek.books, cachedWeek.meta, form, inputDate, {
+        offlineMode,
+      });
       return;
     }
 
@@ -160,7 +194,9 @@ export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): Use
         books: response.books,
         meta: response.meta,
       });
-      applyQueryResult(response.books, response.meta, form, inputDate);
+      applyQueryResult(response.books, response.meta, form, inputDate, {
+        offlineMode,
+      });
     } catch (error: unknown) {
       if (isAbortError(error) || requestId !== requestIdRef.current) {
         return;
@@ -172,7 +208,20 @@ export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): Use
       setLastQuery(null);
 
       if (error instanceof NYTApiError) {
-        setStatus(createStatus('error', error.code, error.message));
+        if (
+          error.code === BOOKS_STATUS_CODES.NETWORK_ERROR &&
+          isOfflineMode()
+        ) {
+          setStatus(
+            createStatus(
+              'warning',
+              BOOKS_STATUS_CODES.OFFLINE_CACHE_MISS,
+              'Sin conexion y sin datos cacheados para esta consulta. Conectate a internet para obtener resultados nuevos.',
+            ),
+          );
+        } else {
+          setStatus(createStatus('error', error.code, error.message));
+        }
       } else {
         setStatus(
           createStatus(

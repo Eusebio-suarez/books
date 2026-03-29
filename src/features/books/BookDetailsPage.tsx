@@ -248,6 +248,10 @@ function getInitialStatus(): QueryStatus {
   );
 }
 
+function isOfflineMode(): boolean {
+  return typeof navigator !== 'undefined' && !navigator.onLine;
+}
+
 export function BookDetailsPage({ route }: BookDetailsPageProps) {
   const { theme, toggleTheme } = useThemeMode();
   const [book, setBook] = useState<BookItem | null>(null);
@@ -260,10 +264,20 @@ export function BookDetailsPage({ route }: BookDetailsPageProps) {
     const controller = new AbortController();
 
     async function loadBookDetails(): Promise<void> {
+      const offlineMode = isOfflineMode();
+
       setIsLoading(true);
       setBook(null);
       setMeta(null);
-      setStatus(getInitialStatus());
+      setStatus(
+        offlineMode
+          ? createStatus(
+              'info',
+              BOOKS_STATUS_CODES.OFFLINE_CACHE_MODE,
+              'Sin conexion: intentando abrir la ficha con datos cacheados.',
+            )
+          : getInitialStatus(),
+      );
 
       try {
         const response = await fetchMassMarketBooks(route.date, {
@@ -287,11 +301,17 @@ export function BookDetailsPage({ route }: BookDetailsPageProps) {
 
         setBook(matchedBook);
         setStatus(
-          createStatus(
-            'success',
-            BOOKS_STATUS_CODES.QUERY_SUCCESS,
-            'Ficha del libro cargada correctamente.',
-          ),
+          offlineMode
+            ? createStatus(
+                'info',
+                BOOKS_STATUS_CODES.OFFLINE_CACHE_MODE,
+                'Sin conexion: ficha cargada desde cache local.',
+              )
+            : createStatus(
+                'success',
+                BOOKS_STATUS_CODES.QUERY_SUCCESS,
+                'Ficha del libro cargada correctamente.',
+              ),
         );
       } catch (error: unknown) {
         if (isAbortError(error)) {
@@ -302,7 +322,20 @@ export function BookDetailsPage({ route }: BookDetailsPageProps) {
         setMeta(null);
 
         if (error instanceof NYTApiError) {
-          setStatus(createStatus('error', error.code, error.message));
+          if (
+            error.code === BOOKS_STATUS_CODES.NETWORK_ERROR &&
+            isOfflineMode()
+          ) {
+            setStatus(
+              createStatus(
+                'warning',
+                BOOKS_STATUS_CODES.OFFLINE_CACHE_MISS,
+                'Sin conexion y sin cache disponible para esta ficha. Conectate para volver a intentarlo.',
+              ),
+            );
+          } else {
+            setStatus(createStatus('error', error.code, error.message));
+          }
         } else {
           setStatus(
             createStatus(

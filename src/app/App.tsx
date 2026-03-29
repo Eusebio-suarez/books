@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { NetworkStatusBanner } from './NetworkStatusBanner';
 import { BookDetailsPage } from '../features/books/BookDetailsPage';
 import { BooksPage } from '../features/books/BooksPage';
 import { parseBooksRoute, type BooksRoute } from '../features/books/books.routes';
+import { useNetworkStatus } from './useNetworkStatus';
 import { useThemeMode } from './useThemeMode';
 
 function getCurrentRoute(): BooksRoute {
@@ -58,6 +60,7 @@ function NotFoundPage() {
 
 export default function App() {
   const [route, setRoute] = useState<BooksRoute>(getCurrentRoute);
+  const { isOnline } = useNetworkStatus();
 
   useEffect(() => {
     function handlePopState(): void {
@@ -71,13 +74,12 @@ export default function App() {
     };
   }, []);
 
-  if (route.view === 'detail') {
-    return <BookDetailsPage route={route} />;
-  }
-
-  if (route.view === 'not-found') {
-    return <NotFoundPage />;
-  }
-
-  return <BooksPage />;
+  return (
+    <>
+      <NetworkStatusBanner isOnline={isOnline} />
+      {route.view === 'detail' ? <BookDetailsPage route={route} /> : null}
+      {route.view === 'not-found' ? <NotFoundPage /> : null}
+      {route.view === 'list' ? <BooksPage /> : null}
+    </>
+  );
 }
