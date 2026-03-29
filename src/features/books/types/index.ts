@@ -1,4 +1,4 @@
-import type { ChangeEvent, FormEvent } from 'react';
+import type { ChangeEvent } from 'react';
 
 export type QueryType = 'latest' | 'date' | 'title' | 'author';
 export type QueryTone = 'info' | 'success' | 'warning' | 'error';
@@ -53,6 +53,11 @@ export interface BookIsbn {
   isbn13: string;
 }
 
+export interface BookBuyLink {
+  name: string;
+  url: string;
+}
+
 export interface BookItem {
   rank: number;
   rankLastWeek: number;
@@ -79,6 +84,7 @@ export interface BookItem {
   primaryIsbn10: string;
   primaryIsbn13: string;
   isbns: BookIsbn[];
+  buyLinks: BookBuyLink[];
 }
 
 export interface BooksMeta {
@@ -127,11 +133,17 @@ export interface RawNYTBook {
   primary_isbn10?: string;
   primary_isbn13?: string;
   isbns?: RawNYTIsbn[];
+  buy_links?: RawNYTBuyLink[];
 }
 
 export interface RawNYTIsbn {
   isbn10?: string;
   isbn13?: string;
+}
+
+export interface RawNYTBuyLink {
+  name?: string;
+  url?: string;
 }
 
 export interface RawNYTResults {
@@ -181,11 +193,6 @@ export interface BooksGridProps {
   activeDate: string;
 }
 
-export interface QueryDetailsProps {
-  meta: BooksMeta | null;
-  totalBooks: number;
-}
-
 export interface QueryMenuProps {
   form: BooksFormState;
   isLoading: boolean;
@@ -193,7 +200,6 @@ export interface QueryMenuProps {
   onFieldChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onAuthorSuggestionSelect: (author: string) => void;
   onModeChange: (queryType: QueryType) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }
 
 export interface ResultsHeaderProps {
@@ -205,4 +211,5 @@ export interface ResultsHeaderProps {
 
 export interface StatusBannerProps {
   status: QueryStatus;
+  compact?: boolean;
 }

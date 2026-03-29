@@ -22,15 +22,13 @@ function NotFoundPage() {
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.36em] text-[var(--accent-strong)]">
-                  Ruta no encontrada
-                </p>
+                <p className="section-title">Ruta no encontrada</p>
                 <h1 className="display-font mt-4 text-4xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-5xl">
-                  Esta ficha no existe dentro del explorador
+                  No encontramos esta ruta del explorador
                 </h1>
                 <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                  La URL no coincide con una ficha dinamica valida. Puedes volver al
-                  listado principal y seguir explorando el archivo historico.
+                  La URL no coincide con una ficha valida del archivo. Vuelve al
+                  listado principal para continuar la exploracion.
                 </p>
               </div>
 
@@ -48,7 +46,7 @@ function NotFoundPage() {
 
             <div className="flex flex-wrap gap-3">
               <a href="/" className="primary-button no-underline">
-                Volver al explorador
+                Volver al listado
               </a>
             </div>
           </div>

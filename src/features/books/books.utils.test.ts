@@ -42,6 +42,7 @@ function createBook(overrides: Partial<BookItem>): BookItem {
     primaryIsbn10: '',
     primaryIsbn13: '',
     isbns: [],
+    buyLinks: [],
     ...overrides,
   };
 }
@@ -65,15 +66,15 @@ test('normalizeToPublishedSunday clamps the supported archived range', () => {
   );
 });
 
-test('validateQueryForm enforces title and author queries', () => {
+test('validateQueryForm no longer blocks empty title/author queries', () => {
   assert.equal(
     validateQueryForm({
       queryType: QUERY_TYPES.TITLE,
       date: '',
       title: '',
       author: '',
-    })?.code,
-    'MISSING_TITLE',
+    }),
+    null,
   );
 
   assert.equal(
@@ -82,8 +83,8 @@ test('validateQueryForm enforces title and author queries', () => {
       date: '',
       title: '',
       author: '',
-    })?.code,
-    'MISSING_AUTHOR',
+    }),
+    null,
   );
 });
 
@@ -111,6 +112,26 @@ test('filterBooksByQuery filters by title and author without changing other quer
       author: 'lee',
     }),
     [createBook({ title: 'Night School', author: 'Lee Child' })],
+  );
+
+  assert.deepEqual(
+    filterBooksByQuery(books, {
+      queryType: QUERY_TYPES.TITLE,
+      date: '',
+      title: '',
+      author: '',
+    }),
+    books,
+  );
+
+  assert.deepEqual(
+    filterBooksByQuery(books, {
+      queryType: QUERY_TYPES.AUTHOR,
+      date: '',
+      title: '',
+      author: '',
+    }),
+    books,
   );
 });
 

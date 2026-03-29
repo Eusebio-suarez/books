@@ -1,3 +1,4 @@
+import { CalendarDays, Gauge, Rows3, Search } from 'lucide-react';
 import { MASS_MARKET_LIST } from '../books.constants';
 import type { ResultsHeaderProps } from '../types/index';
 
@@ -8,36 +9,35 @@ export function ResultsHeader({
   isLoading,
 }: ResultsHeaderProps) {
   return (
-    <section className="panel">
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="max-w-3xl">
-            <p className="section-title">Resultados</p>
-            <h2 className="display-font mt-3 text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
-              {meta?.displayName || MASS_MARKET_LIST.displayName}
-            </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-              {summary}
-            </p>
-          </div>
-
-          <span className="meta-chip-strong self-start">
-            {isLoading ? 'Actualizando lista' : `${totalBooks} libros visibles`}
-          </span>
+    <section className="results-summary">
+      <div className="results-summary-head">
+        <div className="max-w-3xl min-w-0">
+          <p className="section-title">Resultados</p>
+          <h2 className="results-summary-title display-font">
+            {meta?.displayName || MASS_MARKET_LIST.displayName}
+          </h2>
+          <p className="results-summary-text">{summary}</p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <span className="meta-chip">
-            Bestsellers {meta?.bestsellersDate || MASS_MARKET_LIST.newestPublishedDate}
-          </span>
-          <span className="meta-chip">
-            Cadencia {(meta?.updated || MASS_MARKET_LIST.cadence).toLowerCase()}
-          </span>
-          <span className="meta-chip">
-            Archivo {MASS_MARKET_LIST.oldestPublishedDate.slice(0, 4)}-
-            {MASS_MARKET_LIST.newestPublishedDate.slice(0, 4)}
-          </span>
-        </div>
+        <span className="results-count-chip">
+          <Search className="h-3.5 w-3.5" aria-hidden="true" />
+          {isLoading ? 'Actualizando' : `${totalBooks} resultados`}
+        </span>
+      </div>
+
+      <div className="results-meta-row">
+        <span className="results-meta-chip">
+          <CalendarDays className="h-3.5 w-3.5 text-[var(--accent)]" aria-hidden="true" />
+          Bestsellers {meta?.bestsellersDate || MASS_MARKET_LIST.newestPublishedDate}
+        </span>
+        <span className="results-meta-chip">
+          <Gauge className="h-3.5 w-3.5 text-[var(--accent)]" aria-hidden="true" />
+          Consulta {meta?.resolvedDate || MASS_MARKET_LIST.newestPublishedDate}
+        </span>
+        <span className="results-meta-chip">
+          <Rows3 className="h-3.5 w-3.5 text-[var(--accent)]" aria-hidden="true" />
+          Cadencia {MASS_MARKET_LIST.cadence.toLowerCase()}
+        </span>
       </div>
     </section>
   );

@@ -36,22 +36,7 @@ export function resolveRequestedDate(form: BooksFormState): string {
 }
 
 export function validateQueryForm(form: BooksFormState): QueryStatus | null {
-  if (form.queryType === QUERY_TYPES.TITLE && !form.title.trim()) {
-    return createStatus(
-      'warning',
-      BOOKS_STATUS_CODES.MISSING_TITLE,
-      'Debes escribir un titulo para hacer la consulta.',
-    );
-  }
-
-  if (form.queryType === QUERY_TYPES.AUTHOR && !form.author.trim()) {
-    return createStatus(
-      'warning',
-      BOOKS_STATUS_CODES.MISSING_AUTHOR,
-      'Debes escribir el nombre de un autor para hacer la consulta.',
-    );
-  }
-
+  void form;
   return null;
 }
 
@@ -153,10 +138,18 @@ export function getQuerySummary(
   }
 
   if (lastQuery.queryType === QUERY_TYPES.TITLE) {
+    if (!lastQuery.title.trim()) {
+      return `${totalBooks} libros disponibles para la semana del ${meta.bestsellersDate}.`;
+    }
+
     return `Resultados para "${lastQuery.title}" en la semana del ${meta.bestsellersDate}.`;
   }
 
   if (lastQuery.queryType === QUERY_TYPES.AUTHOR) {
+    if (!lastQuery.author.trim()) {
+      return `${totalBooks} libros disponibles para la semana del ${meta.bestsellersDate}.`;
+    }
+
     return `Resultados para ${lastQuery.author} en la semana del ${meta.bestsellersDate}.`;
   }
 

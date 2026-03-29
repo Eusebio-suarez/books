@@ -8,6 +8,7 @@ import {
   createStatus,
   filterBooksByQuery,
   hasDateAdjustment,
+  normalizeToPublishedSunday,
   resolveRequestedDate,
   validateQueryForm,
 } from '../books.utils';
@@ -18,6 +19,11 @@ import {
 } from '../services/nytBooks.service';
 import type { UseBooksQueryResult, BookItem, BooksFormState, BooksMeta, QueryStatus } from '../types/index';
 
+interface CachedWeekEntry {
+  books: BookItem[];
+  meta: BooksMeta;
+}
+
 export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): UseBooksQueryResult {
   const [books, setBooks] = useState<BookItem[]>([]);
   const [fetchedBooks, setFetchedBooks] = useState<BookItem[]>([]);
@@ -26,14 +32,102 @@ export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): Use
   const [isLoading, setIsLoading] = useState(false);
   const [lastQuery, setLastQuery] = useState<BooksFormState | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const weekCacheRef = useRef<Map<string, CachedWeekEntry>>(new Map());
   const requestIdRef = useRef(0);
   const initialQueryRef = useRef<BooksFormState>(initialQuery);
+
+  const applyQueryResult = useCallback(
+    (
+      sourceBooks: BookItem[],
+      sourceMeta: BooksMeta,
+      form: BooksFormState,
+      inputDate: string,
+    ): void => {
+      const viewMeta =
+        sourceMeta.requestedDate === inputDate
+          ? sourceMeta
+          : {
+              ...sourceMeta,
+              requestedDate: inputDate,
+            };
+      const filteredBooks = filterBooksByQuery(sourceBooks, form);
+
+      setFetchedBooks(sourceBooks);
+      setMeta(viewMeta);
+      setBooks(filteredBooks);
+      setLastQuery({ ...form, date: inputDate });
+
+      if (!filteredBooks.length) {
+        setStatus(
+          createStatus(
+            'warning',
+            BOOKS_STATUS_CODES.NO_RESULTS,
+            'No se encontraron libros que coincidan con tu consulta en esa semana.',
+          ),
+        );
+        return;
+      }
+
+      if (hasDateAdjustment(viewMeta)) {
+        setStatus(
+          createStatus(
+            'info',
+            BOOKS_STATUS_CODES.DATE_ADJUSTED,
+            `La fecha solicitada se ajusto a ${viewMeta.resolvedDate} porque esta lista solo se publicaba los domingos.`,
+          ),
+        );
+        return;
+      }
+
+      setStatus(
+        createStatus(
+          'success',
+          BOOKS_STATUS_CODES.QUERY_SUCCESS,
+          'Consulta completada correctamente.',
+        ),
+      );
+    },
+    [],
+  );
 
   const runQuery = useCallback(async (form: BooksFormState) => {
     const validationStatus = validateQueryForm(form);
 
     if (validationStatus) {
       setStatus(validationStatus);
+      return;
+    }
+
+    const inputDate = resolveRequestedDate(form);
+    let resolvedDate: string;
+
+    try {
+      resolvedDate = normalizeToPublishedSunday(inputDate);
+    } catch (error) {
+      if (error instanceof Error && error.message === BOOKS_STATUS_CODES.INVALID_DATE) {
+        setBooks([]);
+        setFetchedBooks([]);
+        setMeta(null);
+        setLastQuery(null);
+        setStatus(
+          createStatus(
+            'error',
+            BOOKS_STATUS_CODES.INVALID_DATE,
+            'Ingresa una fecha valida en formato YYYY-MM-DD.',
+          ),
+        );
+      }
+
+      return;
+    }
+
+    const cachedWeek = weekCacheRef.current.get(resolvedDate);
+
+    if (cachedWeek) {
+      abortRef.current?.abort();
+      requestIdRef.current += 1;
+      setIsLoading(false);
+      applyQueryResult(cachedWeek.books, cachedWeek.meta, form, inputDate);
       return;
     }
 
@@ -54,7 +148,6 @@ export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): Use
     );
 
     try {
-      const inputDate = resolveRequestedDate(form);
       const response = await fetchMassMarketBooks(inputDate, {
         signal: controller.signal,
       });
@@ -63,42 +156,11 @@ export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): Use
         return;
       }
 
-      const filteredBooks = filterBooksByQuery(response.books, form);
-
-      setFetchedBooks(response.books);
-      setMeta(response.meta);
-      setBooks(filteredBooks);
-      setLastQuery({ ...form, date: inputDate });
-
-      if (!filteredBooks.length) {
-        setStatus(
-          createStatus(
-            'warning',
-            BOOKS_STATUS_CODES.NO_RESULTS,
-            'No se encontraron libros que coincidan con tu consulta en esa semana.',
-          ),
-        );
-        return;
-      }
-
-      if (hasDateAdjustment(response.meta)) {
-        setStatus(
-          createStatus(
-            'info',
-            BOOKS_STATUS_CODES.DATE_ADJUSTED,
-            `La fecha solicitada se ajusto a ${response.meta.resolvedDate} porque esta lista solo se publicaba los domingos.`,
-          ),
-        );
-        return;
-      }
-
-      setStatus(
-        createStatus(
-          'success',
-          BOOKS_STATUS_CODES.QUERY_SUCCESS,
-          'Consulta completada correctamente.',
-        ),
-      );
+      weekCacheRef.current.set(response.meta.resolvedDate, {
+        books: response.books,
+        meta: response.meta,
+      });
+      applyQueryResult(response.books, response.meta, form, inputDate);
     } catch (error: unknown) {
       if (isAbortError(error) || requestId !== requestIdRef.current) {
         return;
@@ -125,7 +187,7 @@ export function useBooksQuery(initialQuery: BooksFormState = DEFAULT_QUERY): Use
         setIsLoading(false);
       }
     }
-  }, []);
+  }, [applyQueryResult]);
 
   useEffect(() => {
     void runQuery(initialQueryRef.current);

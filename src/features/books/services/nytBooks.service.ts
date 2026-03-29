@@ -98,7 +98,42 @@ function mapIsbns(isbns: RawNYTBook['isbns'] = []): BookItem['isbns'] {
   }));
 }
 
+function mapBuyLinks(
+  buyLinks: RawNYTBook['buy_links'] = [],
+  amazonUrl = '',
+): BookItem['buyLinks'] {
+  const seen = new Set<string>();
+  const mappedLinks = buyLinks.flatMap((entry) => {
+    const name = entry.name?.trim() ?? '';
+    const url = entry.url?.trim() ?? '';
+
+    if (!name || !url || seen.has(url)) {
+      return [];
+    }
+
+    seen.add(url);
+    return [{ name, url }];
+  });
+
+  if (!mappedLinks.length) {
+    const normalizedAmazonUrl = amazonUrl.trim();
+
+    if (normalizedAmazonUrl) {
+      return [
+        {
+          name: 'Amazon',
+          url: normalizedAmazonUrl,
+        },
+      ];
+    }
+  }
+
+  return mappedLinks;
+}
+
 function mapBook(book: RawNYTBook): BookItem {
+  const amazonUrl = book.amazon_product_url ?? '';
+
   return {
     rank: book.rank ?? 0,
     rankLastWeek: book.rank_last_week ?? 0,
@@ -116,7 +151,7 @@ function mapBook(book: RawNYTBook): BookItem {
     image: book.book_image ?? '',
     imageWidth: book.book_image_width ?? 0,
     imageHeight: book.book_image_height ?? 0,
-    amazonUrl: book.amazon_product_url ?? '',
+    amazonUrl,
     bookReviewLink: book.book_review_link ?? '',
     firstChapterLink: book.first_chapter_link ?? '',
     sundayReviewLink: book.sunday_review_link ?? '',
@@ -125,6 +160,7 @@ function mapBook(book: RawNYTBook): BookItem {
     primaryIsbn10: book.primary_isbn10 ?? '',
     primaryIsbn13: book.primary_isbn13 ?? '',
     isbns: mapIsbns(book.isbns),
+    buyLinks: mapBuyLinks(book.buy_links, amazonUrl),
   };
 }
 
