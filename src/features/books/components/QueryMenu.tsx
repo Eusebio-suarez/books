@@ -1,3 +1,4 @@
+import type { ChangeEvent, KeyboardEvent } from 'react';
 import {
   BookText,
   CalendarDays,
@@ -23,6 +24,7 @@ export function QueryMenu({
   onFieldChange,
   onAuthorSuggestionSelect,
   onModeChange,
+  onFilterCommit,
 }: QueryMenuProps) {
   const needsDate = form.queryType !== QUERY_TYPES.LATEST;
   const isAuthorQuery = form.queryType === QUERY_TYPES.AUTHOR;
@@ -34,6 +36,17 @@ export function QueryMenu({
   const noteCopy = needsDate
     ? 'La fecha se alinea automaticamente con el domingo historico mas cercano del archivo.'
     : `Se usa automaticamente la fecha mas reciente disponible: ${MASS_MARKET_LIST.newestPublishedDate}.`;
+
+  function handleDateFieldChange(event: ChangeEvent<HTMLInputElement>): void {
+    onFieldChange(event);
+    onFilterCommit?.();
+  }
+
+  function handleTextFieldKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+    if (event.key === 'Enter') {
+      onFilterCommit?.();
+    }
+  }
 
   return (
     <section className="panel filter-sidebar-panel">
@@ -77,6 +90,7 @@ export function QueryMenu({
                   onClick={() => {
                     if (!isActive) {
                       onModeChange(option.id);
+                      onFilterCommit?.();
                     }
                   }}
                   className="filter-check-trigger"
@@ -117,7 +131,7 @@ export function QueryMenu({
                           min={MASS_MARKET_LIST.oldestPublishedDate}
                           max={MASS_MARKET_LIST.newestPublishedDate}
                           step="7"
-                          onChange={onFieldChange}
+                          onChange={handleDateFieldChange}
                           className="input-field"
                         />
                       </label>
@@ -136,6 +150,7 @@ export function QueryMenu({
                           value={form.title}
                           placeholder="Ej. The Whistler"
                           onChange={onFieldChange}
+                          onKeyDown={handleTextFieldKeyDown}
                           className="input-field"
                         />
                       </label>
@@ -151,6 +166,7 @@ export function QueryMenu({
                             value={form.author}
                             placeholder="Ej. John Grisham"
                             onChange={onFieldChange}
+                            onKeyDown={handleTextFieldKeyDown}
                             autoComplete="off"
                             list="author-suggestions-list"
                             className="input-field"
@@ -170,7 +186,10 @@ export function QueryMenu({
                                   <button
                                     key={author}
                                     type="button"
-                                    onClick={() => onAuthorSuggestionSelect(author)}
+                                    onClick={() => {
+                                      onAuthorSuggestionSelect(author);
+                                      onFilterCommit?.();
+                                    }}
                                     className="author-suggestion-button"
                                   >
                                     {author}

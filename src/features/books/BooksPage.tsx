@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { BookOpen, CalendarDays, Filter, Moon, Sun, X } from 'lucide-react';
 import { useThemeMode } from '../../app/useThemeMode';
 import { MASS_MARKET_LIST, QUERY_TYPES } from './books.constants';
@@ -37,12 +38,28 @@ export function BooksPage() {
   );
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const closeDrawerButtonRef = useRef<HTMLButtonElement | null>(null);
+  const filterToggleButtonRef = useRef<HTMLButtonElement | null>(null);
   const { theme, toggleTheme } = useThemeMode();
   const activeDate = meta?.resolvedDate ?? MASS_MARKET_LIST.newestPublishedDate;
   const totalBooks = books.length;
   const summary = getQuerySummary(lastQuery, meta, totalBooks);
   const authorSuggestions = getAuthorSuggestions(fetchedBooks, form.author);
   const showSkeleton = isLoading && !totalBooks;
+
+  const closeFiltersDrawer = useCallback(
+    (restoreFocus = false): void => {
+      setIsFiltersOpen(false);
+
+      if (!restoreFocus || isDesktop || typeof window === 'undefined') {
+        return;
+      }
+
+      window.requestAnimationFrame(() => {
+        filterToggleButtonRef.current?.focus();
+      });
+    },
+    [isDesktop],
+  );
 
   function handleModeChange(queryType: QueryType): void {
     setForm((currentForm) => {
@@ -138,7 +155,7 @@ export function BooksPage() {
 
     function handleEscape(event: KeyboardEvent): void {
       if (event.key === 'Escape') {
-        setIsFiltersOpen(false);
+        closeFiltersDrawer(true);
       }
     }
 
@@ -147,7 +164,7 @@ export function BooksPage() {
     return () => {
       window.removeEventListener('keydown', handleEscape);
     };
-  }, [isDesktop, isFiltersOpen]);
+  }, [closeFiltersDrawer, isDesktop, isFiltersOpen]);
 
   return (
     <main className="page-shell min-h-screen px-4 py-6 sm:px-6 lg:px-8">
@@ -167,6 +184,7 @@ export function BooksPage() {
               <div className="books-hero-actions">
                 {!isDesktop ? (
                   <button
+                    ref={filterToggleButtonRef}
                     type="button"
                     onClick={() => setIsFiltersOpen(true)}
                     className="theme-toggle books-filter-toggle"
@@ -255,53 +273,57 @@ export function BooksPage() {
         </section>
       </div>
 
-      {!isDesktop ? (
-        <>
-          <div
-            className={`books-drawer-backdrop ${isFiltersOpen ? 'is-open' : ''}`}
-            onClick={() => setIsFiltersOpen(false)}
-            aria-hidden={!isFiltersOpen}
-          />
+      {!isDesktop && typeof document !== 'undefined'
+        ? createPortal(
+            <>
+              <div
+                className={`books-drawer-backdrop ${isFiltersOpen ? 'is-open' : ''}`}
+                onClick={() => closeFiltersDrawer(true)}
+                aria-hidden={!isFiltersOpen}
+              />
 
-          <aside
-            id="books-filters-drawer"
-            className={`books-drawer ${isFiltersOpen ? 'books-drawer-open' : ''}`}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Filtros de busqueda"
-            aria-hidden={!isFiltersOpen}
-          >
-            <div className="books-drawer-surface">
-              <header className="books-drawer-head">
-                <p className="section-title">Panel movil</p>
-                <button
-                  ref={closeDrawerButtonRef}
-                  type="button"
-                  onClick={() => setIsFiltersOpen(false)}
-                  className="theme-toggle books-drawer-close"
-                  aria-label="Cerrar filtros"
-                >
-                  <X className="h-4 w-4" aria-hidden="true" />
-                  Cerrar
-                </button>
-              </header>
+              <aside
+                id="books-filters-drawer"
+                className={`books-drawer ${isFiltersOpen ? 'books-drawer-open' : ''}`}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Filtros de busqueda"
+                aria-hidden={!isFiltersOpen}
+              >
+                <div className="books-drawer-surface">
+                  <header className="books-drawer-head">
+                    <p className="section-title">Panel movil</p>
+                    <button
+                      ref={closeDrawerButtonRef}
+                      type="button"
+                      onClick={() => closeFiltersDrawer(true)}
+                      className="theme-toggle books-drawer-close"
+                      aria-label="Cerrar filtros"
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                      Cerrar
+                    </button>
+                  </header>
 
-              <div className="books-drawer-content">
-                <QueryMenu
-                  form={form}
-                  isLoading={isLoading}
-                  authorSuggestions={authorSuggestions}
-                  onFieldChange={handleFieldChange}
-                  onAuthorSuggestionSelect={handleAuthorSuggestionSelect}
-                  onModeChange={handleModeChange}
-                />
+                  <div className="books-drawer-content">
+                    <QueryMenu
+                      form={form}
+                      isLoading={isLoading}
+                      authorSuggestions={authorSuggestions}
+                      onFieldChange={handleFieldChange}
+                      onAuthorSuggestionSelect={handleAuthorSuggestionSelect}
+                      onModeChange={handleModeChange}
+                      onFilterCommit={() => closeFiltersDrawer(true)}
+                    />
 
-                <StatusBanner status={status} compact />
-              </div>
-            </div>
-          </aside>
-        </>
-      ) : null}
+                    <StatusBanner status={status} compact />
+                  </div>
+                </div>
+              </aside>
+            </>,
+            document.body,
+          )
+        : null}
     </main>
   );
 }

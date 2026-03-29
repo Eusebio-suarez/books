@@ -200,6 +200,7 @@ export interface QueryMenuProps {
   onFieldChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onAuthorSuggestionSelect: (author: string) => void;
   onModeChange: (queryType: QueryType) => void;
+  onFilterCommit?: () => void;
 }
 
 export interface ResultsHeaderProps {
