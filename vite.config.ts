@@ -54,8 +54,8 @@ export default defineConfig({
         name: 'NYT Books Mass Market Paperback',
         short_name: 'NYT Books',
         description: 'Top books from NYT Mass Market Paperback list',
-        theme_color: '#2596be',
-        background_color: '#2596be',
+        theme_color: '#0f1622',
+        background_color: '#0f1622',
         start_url: '/',
         display: 'standalone',
         icons: [
